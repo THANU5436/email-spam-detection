@@ -1,0 +1,62 @@
+import pandas as pd
+import numpy as np
+import string
+import re
+
+from sklearn.model_selection import train_test_split
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.naive_bayes import MultinomialNB  # Or use SVM: from sklearn.svm import LinearSVC
+from sklearn.metrics import accuracy_score, precision_score, recall_score
+
+import nltk
+nltk.download('stopwords')
+from nltk.corpus import stopwords
+
+# 1. Load your dataset
+# Make sure your CSV has 'text' and 'label' columns (label: 'spam' or 'ham')
+df = pd.read_csv('email.csv')  # Replace with your actual path
+
+# 2. Preprocessing
+def clean_text(text):
+    text = text.lower()
+    text = re.sub(r'\d+', '', text)  # Remove digits
+    text = text.translate(str.maketrans('', '', string.punctuation))  # Remove punctuation
+    tokens = text.split()
+    stop_words = set(stopwords.words('english'))
+    tokens = [w for w in tokens if w not in stop_words]
+    return " ".join(tokens)
+
+df['clean_text'] = df['text'].apply(clean_text)
+
+# 3. Train/Test Split
+X_train, X_test, y_train, y_test = train_test_split(
+    df['clean_text'], df['label'], test_size=0.2, random_state=42
+)
+
+# 4. TF-IDF Vectorization
+vectorizer = TfidfVectorizer()
+X_train_vec = vectorizer.fit_transform(X_train)
+X_test_vec = vectorizer.transform(X_test)
+
+# 5. Model Training (Naive Bayes)
+model = MultinomialNB()
+model.fit(X_train_vec, y_train)
+
+# 6. Prediction and Evaluation
+y_pred = model.predict(X_test_vec)
+accuracy = accuracy_score(y_test, y_pred)
+precision = precision_score(y_test, y_pred, pos_label='spam')
+recall = recall_score(y_test, y_pred, pos_label='spam')
+
+print(f"Accuracy: {accuracy*100:.2f}%")
+print(f"Precision: {precision:.2f}")
+print(f"Recall: {recall:.2f}")
+
+# 7. Usage Example - Predict on a single email
+def predict_spam(email_text):
+    clean = clean_text(email_text)
+    vec = vectorizer.transform([clean])
+    return model.predict(vec)[0]
+print(f"Accuracy: {accuracy*100:.2f}%")
+print(f"Precision: {precision:.2f}")
+print(f"Recall: {recall:.2f}")
